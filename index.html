@@ -162,7 +162,8 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 #board-diff button[aria-pressed="true"] { border-color: var(--ember); background: rgba(238, 138, 58, 0.13); }
 .vol select, .vol input[type="text"] { font: 500 16px var(--font-body); letter-spacing: 0.02em; text-transform: none; color: var(--bone); background: rgba(236, 228, 207, 0.06); border: 1px solid var(--line); border-radius: 2px; padding: 8px 10px; }
 .vol select:focus-visible, .vol input[type="text"]:focus-visible { outline: 2px solid var(--ember); outline-offset: 1px; }
-.nick-ask { max-width: 420px; }
+.nick-ask { max-width: 440px; padding: 10px 12px 12px; border: 1px solid var(--ember); background: rgba(238, 138, 58, 0.09); border-radius: 2px; }
+.nick-ask .vol > span:first-child { color: var(--ember); }
 .nick-ask-row { display: flex; gap: 8px; }
 .nick-ask-row input { flex: 1; min-width: 0; }
 .vol select option { color: #1f1c18; }
@@ -402,7 +403,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
         <div class="stat"><span data-i18n="sAcc">Accuracy</span><b id="st-acc">0%</b></div>
         <div class="stat"><span data-i18n="sStreak">Best streak</span><b id="st-combo">0</b></div>
       </div>
-      <div class="actions">
+      <div class="actions" id="over-actions">
         <button class="go" type="button" id="retry-btn">Try again <kbd>Enter</kbd></button>
         <button class="ghost" type="button" id="title-btn"><span data-i18n="biomes">Biomes</span> <kbd>Esc</kbd></button>
       </div>
@@ -2355,13 +2356,19 @@ function bossDown(z) {
 let overReady = false, overAction = 'retry';
 // after a run on a page with a board, a nameless player is offered a name field; it stops once
 // they save one or after it has been ignored three times (the board screen can still set it)
-function askNick() {
-  if (mode !== 'over' || !board.db || board.readOnly || (store.get('hw.nick') || '').trim()) return;
-  const asked = parseInt(store.get('hw.nickAsks') || '0', 10) || 0;
-  if (asked >= 3) return;
-  store.set('hw.nickAsks', String(asked + 1));
+// after a lost run, a nameless player has to pick a leaderboard name before moving on (nameGate);
+// after a win the field is only offered, at most three times
+let nameGate = false;
+function askNick(required) {
+  if (mode !== 'over' || !board.db || board.readOnly || (store.get('hw.nick') || '').trim()) return false;
+  if (!required) {
+    const asked = parseInt(store.get('hw.nickAsks2') || '0', 10) || 0;
+    if (asked >= 3) return false;
+    store.set('hw.nickAsks2', String(asked + 1));
+  }
   $('nick-ask-input').value = '';
   $('nick-ask').hidden = false;
+  return true;
 }
 $('nick-ask').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -2369,8 +2376,9 @@ $('nick-ask').addEventListener('submit', (e) => {
   if (!v || nameRefused($('nick-ask-input'), v)) return;
   $('board-nick').value = v; saveNick();
   $('nick-ask').hidden = true;
-  $('over-board').textContent = tr('nickSaved', v);
+  $('over-board').textContent = tr('nickSaved', v); $('over-board').hidden = false;
   $('nick-ask-input').blur();
+  if (nameGate) { nameGate = false; $('over-actions').hidden = false; }
 });
 function gameOver(won) {
   world.target = null;
@@ -2382,7 +2390,9 @@ function gameOver(won) {
   $('over-board').hidden = true; $('nick-ask').hidden = true;
   // ask for a name straight away: waiting for the post (a new login plus a save) could take
   // longer than the player stays on this screen
-  askNick();
+  nameGate = !won && askNick(true);
+  if (won) askNick(false);
+  $('over-actions').hidden = nameGate;
   postRun(stats.runs[stats.runs.length - 1]).then((ok) => { if (ok) { $('over-board').textContent = tr('boardPosted'); $('over-board').hidden = false; } });
   if (!won) { music.stop(1.2); sfx.over(); }
   const prev = readBest(biomeIdx);
@@ -2415,7 +2425,10 @@ function gameOver(won) {
   overAction = won && !last ? 'next' : 'retry';
   $('retry-btn').innerHTML = `${overAction === 'next' ? tr('onward', bName(next)) : tr(won ? 'playAgain' : 'tryAgain')} <kbd>Enter</kbd>`;
   overReady = false;
-  setTimeout(() => { overReady = true; }, 900);
+  setTimeout(() => {
+    overReady = true;
+    if (mode === 'over' && !$('nick-ask').hidden && (nameGate || !matchMedia('(pointer: coarse)').matches)) $('nick-ask-input').focus();
+  }, 900);
 }
 function overGo() {
   if (overAction === 'next') { selectBiome(biomeIdx + 1); mode = 'title'; }
@@ -4617,7 +4630,13 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (mode === 'over') {
-    if (e.target.id === 'nick-ask-input') { if (k === 'Escape') { e.preventDefault(); e.target.blur(); } return; }
+    // while a name is required, Enter and Esc only lead back to the name field
+    if (nameGate) { if (k === 'Enter' || k === 'Escape') { if (e.target.id !== 'nick-ask-input' || k === 'Escape') e.preventDefault(); $('nick-ask-input').focus(); } return; }
+    if (e.target.id === 'nick-ask-input') {
+      if (k === 'Escape') { e.preventDefault(); e.target.blur(); }
+      else if (k === 'Enter' && !e.target.value.trim()) { e.preventDefault(); if (overReady) overGo(); }
+      return;
+    }
     if (k === 'Enter') { e.preventDefault(); if (overReady) overGo(); }
     else if (k === 'Escape') toTitle();
     return;
