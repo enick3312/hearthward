@@ -2533,7 +2533,7 @@ function openStats() { resetArmed = false; wipeArmed = false; $('stats-reset').t
 // Anywhere else (a GitHub Pages copy, say) the same documents live in a Supabase table instead.
 // public values by design: the table's row-level security, not secrecy, keeps each player to their own row
 const SUPABASE = { url: 'https://dstxohfmjdewlqmxuion.supabase.co', key: 'sb_publishable_Rnw3DgJiWyk7qwndwOQ96A_nCVkiFXQ' };
-const board = { db: null, user: null, me: null, signIn: null, down: false, docs: new Map(), loaded: false, readOnly: false, queue: Promise.resolve(), diff: null, biome: 'all' };
+const board = { db: null, user: null, me: null, signIn: null, down: false, synced: false, docs: new Map(), loaded: false, readOnly: false, queue: Promise.resolve(), diff: null, biome: 'all' };
 
 // Supabase stand-in for the few database calls the board makes: every browser signs in
 // anonymously on its first post, and the table's row-level security lets it write only its own row
@@ -2555,11 +2555,13 @@ function supabaseBoard(url, key) {
     }
     return session && session.token;
   };
-  const rest = async (method, path, body, extra) => {
+  const rest = async (method, path, body, extra, retried) => {
     const t = await token(), headers = { apikey: key, 'Content-Type': 'application/json', ...extra };
     if (t) headers.Authorization = 'Bearer ' + t;
     const r = await fetch(url + '/rest/v1/' + path, { method, headers, body: body && JSON.stringify(body) });
-    if (!r.ok) { const e = new Error('rest ' + r.status); e.code = r.status === 401 || r.status === 403 ? 'invalid_argument' : 'unavailable'; throw e; }
+    // a rejected login gets one refresh and retry; any other failure is left for the next sync
+    if (r.status === 401 && t && !retried) { session.exp = 0; return rest(method, path, body, extra, true); }
+    if (!r.ok) { const e = new Error('rest ' + r.status); e.code = 'unavailable'; throw e; }
     return r.status === 204 ? null : r.json().catch(() => null);
   };
   const refresh = async () => {
@@ -2590,6 +2592,7 @@ function initBoard() {
     board.db.collection('scores').onSnapshot((snap) => {
       board.docs = new Map(snap.docs.map((d) => [d.id, d.data()]));
       board.loaded = true;
+      if (!board.synced) { board.synced = true; postRun(null); }
       if (mode === 'board') renderBoard();
     });
     return;
@@ -2602,24 +2605,44 @@ function initBoard() {
     db.collection('scores').onSnapshot((snap) => {
       board.docs = new Map(snap.docs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
       board.loaded = true;
+      if (!board.synced && board.me) { board.synced = true; postRun(null); }
       if (mode === 'board') renderBoard();
     }, () => { board.loaded = true; if (mode === 'board') renderBoard(); });
   }).catch(() => {});
 }
+// the best run per board key in this browser's own history, so a post that failed
+// (a dropped connection, say) is sent again with the next run or the next visit
+function localBests() {
+  const out = {};
+  for (const r of stats.runs) {
+    if (!r || !r.b || !r.d) continue;
+    const key = `${r.b}.${progKey(r.d, r.l || 'en')}`, prev = out[key];
+    const rec = { score: r.score || 0, wpm: r.wpm, acc: r.acc, won: !!r.won, l: r.l || 'en', sw: !!r.sw, t: r.t };
+    out[key] = !prev || rec.score > prev.score ? { ...rec, won: rec.won || !!(prev && prev.won) } : { ...prev, won: prev.won || rec.won };
+  }
+  return out;
+}
+// returns true when this run (or, with no run, anything) improved the player's entry on the board
 function postRun(rec) {
   if (!board.db || (!board.me && !board.signIn) || board.readOnly) return Promise.resolve(false);
   // one write at a time to this player's document
   board.queue = board.queue.then(async () => {
+    const local = localBests();
+    if (!Object.keys(local).length) return false;
     if (!board.me) { try { board.me = await board.signIn(); } catch (e) { board.down = true; return false; } }
-    const key = `${rec.b}.${progKey(rec.d, rec.l || 'en')}`, mine = board.docs.get(board.me) || {}, runs = { ...(mine.runs || {}) }, prev = runs[key];
-    if (prev && prev.score >= rec.score && (prev.won || !rec.won)) return false;
-    runs[key] = prev && prev.score >= rec.score
-      ? { ...prev, won: true }
-      : { score: rec.score, wpm: rec.wpm, acc: rec.acc, won: rec.won || !!(prev && prev.won), l: rec.l, sw: rec.sw, t: rec.t };
-    const nick = (store.get('hw.nick') || '').trim().slice(0, 24);
+    const mine = board.docs.get(board.me) || {}, runs = { ...(mine.runs || {}) }, changed = new Set();
+    for (const [key, r] of Object.entries(local)) {
+      const prev = runs[key];
+      if (prev && (prev.score || 0) >= r.score && (prev.won || !r.won)) continue;
+      runs[key] = prev && (prev.score || 0) >= r.score ? { ...prev, won: true } : { ...r, won: r.won || !!(prev && prev.won) };
+      changed.add(key);
+    }
+    if (!changed.size) return false;
+    const nick = (store.get('hw.nick') || mine.nick || '').trim().slice(0, 24);
     // keep the local copy current so a quick second run compares against this one, not a stale board
-    try { await board.db.doc('scores/' + board.me).set({ nick, runs }); board.docs.set(board.me, { ...mine, nick, runs }); return true; }
+    try { await board.db.doc('scores/' + board.me).set({ nick, runs }); board.docs.set(board.me, { ...mine, nick, runs }); }
     catch (e) { if (e && e.code === 'invalid_argument') board.readOnly = true; return false; }
+    return rec ? changed.has(`${rec.b}.${progKey(rec.d, rec.l || 'en')}`) : true;
   });
   return board.queue;
 }
