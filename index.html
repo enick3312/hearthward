@@ -278,7 +278,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 
   <div class="banner gutter" id="banner"><div class="banner-main" id="banner-main"></div><div class="banner-sub" id="banner-sub"></div></div>
 
-  <div class="credit gutter">Nikita Elinov 2026 <span class="build">· build 39</span><small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
+  <div class="credit gutter">Nikita Elinov 2026 <span class="build">· build 41</span><small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
   <section class="screen side gutter" id="title-screen">
     <div class="card title-card">
       <div class="eyebrow" data-i18n="eyebrow">Typing survival &middot; eight biomes &middot; eight bosses</div>
@@ -3983,11 +3983,12 @@ function drawQuad(z, o, c) {
   });
   shadeIn(body, c.colD, c.colL);
   if (o.skull) {
-    // huge spines of bone jutting up out of the Vile's back, tallest over the shoulders
+    // bare vertebrae standing out of the Vile's back: broad, flat-topped plates of bone
     for (let i = 0; i < 7; i++) {
-      const x = -L * 0.34 + i * L * 0.1, base = by - bh * 0.46 + Math.abs(i - 1.5) * 0.6, h = (34 - i * 3.6) * (i % 2 ? 0.8 : 1), lean = 5 + i * 1.2;
-      poly([x - 4.5, base + 3, x + lean, base - h, x + 4.5, base + 3], '#d9cfb6');
-      line(x - 1, base, x + lean * 0.8, base - h * 0.8, 1.2, '#a89c80');
+      // a hump: low by the neck, tallest over the shoulders, tapering toward the rump
+      const x = -L * 0.34 + i * L * 0.1, base = by - bh * 0.46 + Math.abs(i - 1.5) * 0.6, h = 6 + 10 * Math.exp(-((i - 2.2) ** 2) / 4), lean = 2;
+      poly([x - 3.5, base + 3, x - 3 + lean, base - h, x + 3.5 + lean, base - h, x + 4, base + 3], '#d9cfb6');
+      line(x - 3 + lean, base - h, x + 3.5 + lean, base - h, 1.4, '#a89c80');
     }
   }
   if (k === 'boar') { ctx.strokeStyle = '#2a1c12'; ctx.lineWidth = 1.8; ctx.beginPath(); for (let i = 0; i < 12; i++) { const x = -L * 0.4 + i * L * 0.065, y = by - bh * (0.6 - i * 0.012); ctx.moveTo(x, y + 2); ctx.lineTo(x + 3, y - 6); } ctx.stroke(); }
