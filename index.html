@@ -278,7 +278,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 
   <div class="banner gutter" id="banner"><div class="banner-main" id="banner-main"></div><div class="banner-sub" id="banner-sub"></div></div>
 
-  <div class="credit gutter">Nikita Elinov 2026 <span class="build">· build 37</span><small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
+  <div class="credit gutter">Nikita Elinov 2026 <span class="build">· build 39</span><small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
   <section class="screen side gutter" id="title-screen">
     <div class="card title-card">
       <div class="eyebrow" data-i18n="eyebrow">Typing survival &middot; eight biomes &middot; eight bosses</div>
@@ -542,7 +542,7 @@ const C = {
   bat:       { name: 'Bat', body: 'flyer', h: 26, size: 0.55, speed: 124, dmg: 3, words: 'short', alt: 90, look: { kind: 'wyvern', col: '#4a3a3a', band: '#2a1e1e', wing: '#5a4040', crest: '#7a6060' }, intro: 'Bat · swarms fast' },
   ulv:       { name: 'Ulv', body: 'quad', h: 66, size: 1.05, speed: 104, dmg: 7, words: 'short', look: { kind: 'wolf', col: '#4e5a6a', len: 70, legH: 28, bodyH: 28 }, intro: 'Ulv · hunts in packs' },
   growth:    { name: 'Growth', body: 'blob', h: 44, size: 1.1, speed: 30, dmg: 8, words: 'mid', ranged: TAR, look: { col: '#2a2622', hi: '#5a5048' }, intro: 'Growth · spits tar' },
-  vile:      { name: 'Vile', body: 'quad', h: 92, size: 1.1, speed: 56, dmg: 13, words: 'mid', look: { kind: 'bear', col: '#7a6a8c', len: 96, legH: 26, bodyH: 52 }, intro: 'Vile · mauls hard' },
+  vile:      { name: 'Vile', body: 'quad', h: 92, size: 1.1, speed: 56, dmg: 13, words: 'mid', look: { kind: 'bear', col: '#7a6a8c', len: 96, legH: 26, bodyH: 52, skull: true }, intro: 'Vile · mauls hard' },
   brood:     { name: 'Seeker Brood', body: 'bug', h: 36, size: 0.75, speed: 96, dmg: 4, words: 'short', look: { shell: '#7a6494', glow: '#d8a8ff', wing: '#dccff0' }, intro: 'Seeker Brood · swarms' },
   warlock:   { name: 'Charred Warlock', body: 'human', h: 112, size: 1, speed: 42, dmg: 8, words: 'mid', ranged: FIRE, look: { skin: '#3a302a', cloth: '#4a2c3a', pants: '#3a302a', head: 'skull', weapon: 'staff', orb: '#ff6a3a', skel: true, eye: '#ff8a3a' }, intro: 'Charred Warlock · hurls fire' },
   volture:   { name: 'Volture', body: 'flyer', h: 40, size: 1, speed: 70, dmg: 6, words: 'mid', alt: 110, look: { kind: 'wyvern', col: '#3a2a2a', band: '#1a1212', wing: '#5a2a24', crest: '#ff8a3a' }, intro: 'Volture · dives from the ash' },
@@ -3970,8 +3970,26 @@ function drawQuad(z, o, c) {
     if (k === 'wolf') hatch(R, 12, -L * 0.5, by - bh * 0.5, L * 0.4, bh, 4, 4, c.colL, 1.1);
     if (k === 'stag') ellipse(L * 0.42, by - bh * 0.1, L * 0.12, bh * 0.35, c.colL);
     if (k === 'raptor') for (let i = 0; i < 8; i++) { const x = -L * 0.4 + i * L * 0.11; line(x, by - bh * 0.5, x + 4, by + bh * 0.2, 2.5, c.colD); }
+    if (o.skull) {
+      // the Vile's flank is rotted open: a dark cavity with the ribcage showing, and bare spine along the back
+      ellipse(-L * 0.1, by + bh * 0.02, L * 0.25, bh * 0.36, '#241c2a');
+      ctx.strokeStyle = '#d9cfb6'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+      for (let i = 0; i < 6; i++) {
+        const x = -L * 0.3 + i * L * 0.075;
+        ctx.beginPath(); ctx.moveTo(x, by - bh * 0.32); ctx.quadraticCurveTo(x + L * 0.05, by + bh * 0.02, x + L * 0.02, by + bh * 0.32); ctx.stroke();
+      }
+      for (let i = 0; i < 9; i++) circle(-L * 0.36 + i * L * 0.075, by - bh * 0.44, 2.6, '#d9cfb6');
+    }
   });
   shadeIn(body, c.colD, c.colL);
+  if (o.skull) {
+    // huge spines of bone jutting up out of the Vile's back, tallest over the shoulders
+    for (let i = 0; i < 7; i++) {
+      const x = -L * 0.34 + i * L * 0.1, base = by - bh * 0.46 + Math.abs(i - 1.5) * 0.6, h = (34 - i * 3.6) * (i % 2 ? 0.8 : 1), lean = 5 + i * 1.2;
+      poly([x - 4.5, base + 3, x + lean, base - h, x + 4.5, base + 3], '#d9cfb6');
+      line(x - 1, base, x + lean * 0.8, base - h * 0.8, 1.2, '#a89c80');
+    }
+  }
   if (k === 'boar') { ctx.strokeStyle = '#2a1c12'; ctx.lineWidth = 1.8; ctx.beginPath(); for (let i = 0; i < 12; i++) { const x = -L * 0.4 + i * L * 0.065, y = by - bh * (0.6 - i * 0.012); ctx.moveTo(x, y + 2); ctx.lineTo(x + 3, y - 6); } ctx.stroke(); }
   if (k === 'lox') {
     const fr = [-L / 2, by + 6];
@@ -4047,6 +4065,18 @@ function drawQuad(z, o, c) {
     // a heavy round head on a short neck, small round ears, a blunt lighter muzzle
     const hx = -L / 2 - 4, hy = by - 2;
     shape([[-L * 0.44, by - bh * 0.55], [hx + 12, hy - 12], [hx + 8, hy + 14], [-L * 0.4, by + bh * 0.3]], c.col, 1.1);
+    if (o.skull) {
+      // the undead Vile: a bare bear skull, jaw hanging open, faint light in the sockets
+      const bone = '#d9cfb6', boneD = '#a89c80';
+      shape([[hx - 20, hy + 9], [hx - 4, hy + 12], [hx + 9, hy + 6], [hx + 9, hy + 13], [hx - 4, hy + 18], [hx - 19, hy + 15]], boneD, 1);
+      const skull = [[hx + 14, hy - 11], [hx - 1, hy - 15], [hx - 14, hy - 9], [hx - 25, hy - 3], [hx - 27, hy + 4], [hx - 19, hy + 9], [hx + 2, hy + 10], [hx + 14, hy + 3]];
+      shape(skull, bone); shadeIn(skull, boneD, '#f2ead6');
+      ellipse(hx - 7, hy - 5, 4.5, 3.6, '#1a1210'); glow(hx - 7, hy - 5, 2, '196,238,106', 0.7);
+      poly([hx - 25, hy - 1, hx - 21, hy + 3, hx - 25, hy + 4], '#1a1210');
+      line(hx + 2, hy - 13, hx + 8, hy - 1, 1, boneD);
+      ctx.fillStyle = '#f2ead6';
+      for (let i = 0; i < 5; i++) { const tx = hx - 22 + i * 4; ctx.beginPath(); ctx.moveTo(tx, hy + 8); ctx.lineTo(tx + 1.5, hy + 12); ctx.lineTo(tx + 3, hy + 8); ctx.fill(); }
+    } else {
     const head = [[hx + 13, hy - 12], [hx - 2, hy - 15], [hx - 14, hy - 8], [hx - 24, hy - 1], [hx - 25, hy + 7], [hx - 14, hy + 11], [hx + 4, hy + 11], [hx + 14, hy + 2]];
     shape(head, c.col); within(head, () => hatch(R, 10, hx - 24, hy - 15, 38, 26, 3, 3, c.colD)); shadeIn(head, c.colD, c.colL);
     ellipse(hx - 17, hy + 3, 9, 6, c.colL);
@@ -4055,6 +4085,7 @@ function drawQuad(z, o, c) {
     for (const ex of [3, 10]) { circle(hx + ex, hy - 14, 5, c.colD); circle(hx + ex, hy - 14, 2.4, c.colL); }
     eyeDot(hx - 8, hy - 5, 2);
     if (z.attacking) { ctx.fillStyle = '#efe6d0'; for (const tx of [-22, -18]) { ctx.beginPath(); ctx.moveTo(hx + tx, hy + 8); ctx.lineTo(hx + tx + 1.5, hy + 12); ctx.lineTo(hx + tx + 3, hy + 8); ctx.fill(); } }
+    }
   } else if (k === 'moose') {
     const hx = -L / 2 - 12, hy = by - 20;
     // broad palmate antler: a flat blade sweeping up and back, its top edge cut into tines
