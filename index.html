@@ -755,7 +755,7 @@ const UI = {
     boardOff: "The friends' board lives in the game's shared claude.ai link. Open the game there to see and post scores.",
     boardLoading: 'Loading the board…',
     boardRead: "You can watch the board, but runs from your account aren't posted. Ask whoever shared the game to invite you with edit access.",
-    boardPosted: "New personal best posted to the friends' board",
+    boardPosted: "New personal best posted to the friends' board", boardDown: 'Couldn’t reach the leaderboard. Check your connection and try again in a moment.',
     r1t: 'First letter', r1d: 'locks onto the nearest creature whose rune starts with it.',
     r2t: 'Each biome', r2d: 'is three waves, then its boss wearing three runes. Slay it to open the next biome.',
     r3t: 'Ravens', r3d: 'drop mead to mend the palisade and surtling cores that burn the field clean.',
@@ -812,7 +812,7 @@ const UI = {
     boardOff: 'Žebříček přátel funguje ve sdíleném odkazu hry na claude.ai. Otevři hru tam a uvidíš i zapíšeš skóre.',
     boardLoading: 'Načítám žebříček…',
     boardRead: 'Žebříček vidíš, ale hry z tvého účtu se nezapisují. Požádej toho, kdo ti hru poslal, o přístup s úpravami.',
-    boardPosted: 'Nový osobní rekord zapsán do žebříčku přátel',
+    boardPosted: 'Nový osobní rekord zapsán do žebříčku přátel', boardDown: 'Žebříček se nepodařilo načíst. Zkontroluj připojení a zkus to za chvíli znovu.',
     r1t: 'První písmeno', r1d: 'zaměří nejbližšího tvora, jehož runa jím začíná.',
     r2t: 'Každý biom', r2d: 'má tři vlny a pak bosse se třemi runami. Poraz ho a otevře se další biom.',
     r3t: 'Havrani', r3d: 'shazují medovinu, která opraví palisádu, a ohnivá jádra, která vypálí celé pole.',
@@ -2496,12 +2496,73 @@ function openStats() { resetArmed = false; wipeArmed = false; $('stats-reset').t
 
 
 // ---------- friends' leaderboard ----------
-// Only in the published artifact: each player keeps one document, scores/<their id>, holding
-// their best run per biome and difficulty; everyone reads all of them. Names come from the
-// viewer's profile when the platform shares it, else from the name the player typed.
-const board = { db: null, user: null, me: null, docs: new Map(), loaded: false, readOnly: false, queue: Promise.resolve(), diff: null, lang: null, biome: 'all' };
+// Each player keeps one document, scores/<their id>, holding their best run per biome and
+// difficulty; everyone reads all of them. On claude.ai it lives in the artifact's own database and
+// names come from the viewer's profile when the platform shares it, else from the typed name.
+// Anywhere else (a GitHub Pages copy, say) the same documents live in a Supabase table instead.
+// public values by design: the table's row-level security, not secrecy, keeps each player to their own row
+const SUPABASE = { url: 'https://dstxohfmjdewlqmxuion.supabase.co', key: 'sb_publishable_Rnw3DgJiWyk7qwndwOQ96A_nCVkiFXQ' };
+const board = { db: null, user: null, me: null, signIn: null, down: false, docs: new Map(), loaded: false, readOnly: false, queue: Promise.resolve(), diff: null, lang: null, biome: 'all' };
+
+// Supabase stand-in for the few database calls the board makes: every browser signs in
+// anonymously on its first post, and the table's row-level security lets it write only its own row
+function supabaseBoard(url, key) {
+  url = url.replace(/\/+$/, '');
+  let session = null, listener = null, timer = 0;
+  try { session = JSON.parse(store.get('hw.sb') || 'null'); } catch (e) { session = null; }
+  const save = (s) => { session = s; store.set('hw.sb', JSON.stringify(s)); };
+  const auth = async (path, body) => {
+    const r = await fetch(url + '/auth/v1/' + path, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('auth ' + r.status);
+    const j = await r.json();
+    save({ token: j.access_token, refresh: j.refresh_token, exp: Date.now() / 1000 + (j.expires_in || 3600) - 60, id: j.user && j.user.id });
+    return session;
+  };
+  const token = async () => {
+    if (session && session.exp < Date.now() / 1000) {
+      try { await auth('token?grant_type=refresh_token', { refresh_token: session.refresh }); } catch (e) { session = null; }
+    }
+    return session && session.token;
+  };
+  const rest = async (method, path, body, extra) => {
+    const t = await token(), headers = { apikey: key, 'Content-Type': 'application/json', ...extra };
+    if (t) headers.Authorization = 'Bearer ' + t;
+    const r = await fetch(url + '/rest/v1/' + path, { method, headers, body: body && JSON.stringify(body) });
+    if (!r.ok) { const e = new Error('rest ' + r.status); e.code = r.status === 401 || r.status === 403 ? 'invalid_argument' : 'unavailable'; throw e; }
+    return r.status === 204 ? null : r.json().catch(() => null);
+  };
+  const refresh = async () => {
+    try {
+      const rows = await rest('GET', 'scores?select=id,nick,runs');
+      board.down = false;
+      if (listener) listener({ docs: rows.map((r) => ({ id: r.id, exists: true, data: () => r })) });
+    } catch (e) { board.down = true; board.loaded = true; if (mode === 'board') renderBoard(); }
+  };
+  board.me = session && session.id;
+  board.signIn = async () => (session && session.id) || (await auth('signup', { data: {} })).id;
+  return {
+    refresh,
+    collection: () => ({ onSnapshot: (cb) => { listener = cb; refresh(); clearInterval(timer); timer = setInterval(() => { if (mode === 'board' && !document.hidden) refresh(); }, 20000); } }),
+    doc: (path) => {
+      const id = path.split('/')[1];
+      return {
+        set: async (data) => { await rest('POST', 'scores', { id, ...data, updated_at: new Date().toISOString() }, { Prefer: 'resolution=merge-duplicates,return=minimal' }); refresh(); },
+        update: async (data) => { await rest('PATCH', 'scores?id=eq.' + encodeURIComponent(id), data, { Prefer: 'return=minimal' }); refresh(); },
+      };
+    },
+  };
+}
 function initBoard() {
-  if (!window.claude || typeof window.claude.use !== 'function') return;
+  if (!window.claude || typeof window.claude.use !== 'function') {
+    if (!SUPABASE.url || !SUPABASE.key) return;
+    board.db = supabaseBoard(SUPABASE.url, SUPABASE.key);
+    board.db.collection('scores').onSnapshot((snap) => {
+      board.docs = new Map(snap.docs.map((d) => [d.id, d.data()]));
+      board.loaded = true;
+      if (mode === 'board') renderBoard();
+    });
+    return;
+  }
   Promise.all([window.claude.use('db'), window.claude.use('user')]).then(async ([db, user]) => {
     if (!db) return;
     board.db = db; board.user = user;
@@ -2515,16 +2576,18 @@ function initBoard() {
   }).catch(() => {});
 }
 function postRun(rec) {
-  if (!board.db || !board.me || board.readOnly) return Promise.resolve(false);
+  if (!board.db || (!board.me && !board.signIn) || board.readOnly) return Promise.resolve(false);
   // one write at a time to this player's document
   board.queue = board.queue.then(async () => {
+    if (!board.me) { try { board.me = await board.signIn(); } catch (e) { board.down = true; return false; } }
     const key = `${rec.b}.${progKey(rec.d, rec.l || 'en')}`, mine = board.docs.get(board.me) || {}, runs = { ...(mine.runs || {}) }, prev = runs[key];
     if (prev && prev.score >= rec.score && (prev.won || !rec.won)) return false;
     runs[key] = prev && prev.score >= rec.score
       ? { ...prev, won: true }
       : { score: rec.score, wpm: rec.wpm, acc: rec.acc, won: rec.won || !!(prev && prev.won), l: rec.l, sw: rec.sw, t: rec.t };
     const nick = (store.get('hw.nick') || '').trim().slice(0, 24);
-    try { await board.db.doc('scores/' + board.me).set({ nick, runs }); return true; }
+    // keep the local copy current so a quick second run compares against this one, not a stale board
+    try { await board.db.doc('scores/' + board.me).set({ nick, runs }); board.docs.set(board.me, { ...mine, nick, runs }); return true; }
     catch (e) { if (e && e.code === 'invalid_argument') board.readOnly = true; return false; }
   });
   return board.queue;
@@ -2551,7 +2614,7 @@ async function renderBoard() {
   $('board-nick').placeholder = tr('nickPh');
   const list = $('board-list'), note = $('board-note');
   list.innerHTML = '';
-  note.textContent = !board.db ? tr('boardOff') : !board.loaded ? tr('boardLoading') : board.readOnly ? tr('boardRead') : '';
+  note.textContent = !board.db ? tr('boardOff') : !board.loaded ? tr('boardLoading') : board.down ? tr('boardDown') : board.readOnly ? tr('boardRead') : '';
   $('nick-row').hidden = !board.db || board.readOnly;
   if (!board.db || !board.loaded) return;
   let rows = [];
@@ -2589,7 +2652,7 @@ async function renderBoard() {
     list.appendChild(row);
   });
 }
-function openBoard() { board.diff = diffKey; board.lang = langKey; $('board-nick').value = store.get('hw.nick') || ''; setMode('board'); renderBoard(); }
+function openBoard() { board.diff = diffKey; board.lang = langKey; $('board-nick').value = store.get('hw.nick') || ''; setMode('board'); renderBoard(); if (board.db && board.db.refresh) board.db.refresh(); }
 
 // ---------- first-run tips ----------
 const tips = { done: store.get('hw.tips') === '1', pick: store.get('hw.tipPick') === '1', step: 0, hideT: 0 };
@@ -4583,6 +4646,13 @@ setDiff(diffKey);
 renderMute();
 setMode('title');
 initBoard();
+// visitor stats for the public GitHub copy only (GoatCounter sets no cookies); the claude.ai copy and local tests stay uncounted
+const GOATCOUNTER = 'hearthward';
+if (GOATCOUNTER && !window.claude && location.hostname.endsWith('github.io')) {
+  const sc = document.createElement('script');
+  sc.async = true; sc.src = 'https://gc.zgo.at/count.js'; sc.dataset.goatcounter = `https://${GOATCOUNTER}.goatcounter.com/count`;
+  document.head.appendChild(sc);
+}
 resize();
 if (document.fonts && document.fonts.load) Promise.all([document.fonts.load(`700 20px ${FONT_TAG}`), document.fonts.load('700 20px "Cormorant Garamond"', 'ёжў'), document.fonts.load(`20px ${FONT_RUNE}`, 'ᚠ')]).catch(() => {});
 requestAnimationFrame((t) => { last = t; frame(t); });
