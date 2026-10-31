@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta charset="utf-8">
 <title>Hearthward</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -122,6 +125,8 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 .rules dd { margin: 0; color: var(--bone-dim); }
 .credit { position: absolute; right: 0; bottom: 0; z-index: 2; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); font-size: 13px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); pointer-events: none; }
 #app:not([data-mode="title"]) .credit { display: none; }
+.credit { text-align: right; }
+.credit small { display: block; max-width: 380px; text-wrap: balance; margin: 4px 0 0 auto; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; line-height: 1.35; text-transform: none; color: var(--muted); }
 .best { font-family: var(--font-mono); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .best b { color: var(--bone); }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
@@ -267,7 +272,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 
   <div class="banner gutter" id="banner"><div class="banner-main" id="banner-main"></div><div class="banner-sub" id="banner-sub"></div></div>
 
-  <div class="credit gutter">Nikita Elinov 2026</div>
+  <div class="credit gutter">Nikita Elinov 2026<small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
   <section class="screen side gutter" id="title-screen">
     <div class="card title-card">
       <div class="eyebrow" data-i18n="eyebrow">Typing survival &middot; eight biomes &middot; eight bosses</div>
@@ -747,7 +752,7 @@ const UI = {
     lede: 'The ravens left you at a lonely hearth on the edge of the wilds. Everything that wanders out of the trees carries a runestone. Carve its word to loose an arrow before it reaches your palisade.',
     gBiome: 'Biome', unlock: (d) => `Unlock every biome on ${d}`, gLang: 'Rune language', langEnSub: 'The usual runes', langCsSub: 'Diacritics optional',
     gDiff: 'Difficulty', dnoob: 'Noob', dnoobSub: 'Tiny runes, sleepy feet', deasy: 'Easy', deasySub: 'Short runes, slow feet', dnormal: 'Normal', dnormalSub: 'A gentler saga', dhard: 'Hard', dhardSub: 'The full saga', dbrutal: 'Brutal', dbrutalSub: 'Long runes, fast feet',
-    gOptions: 'Options', bigName: 'Gaba has no glasses', bigSub: 'Extra big runes and text', bigSize: 'Text size', swearName: 'Swearing 18+', swearSub: 'Rude runes in either language',
+    gOptions: 'Options', bigName: 'Gaba has no glasses', bigSub: 'Extra big runes and text', bigSize: 'Text size', fanNote: 'Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.', swearName: 'Swearing 18+', swearSub: 'Rude runes in either language',
     volMusic: 'Music volume', volFx: 'Effects volume', statsBtn: 'Stats',
     boardBtn: 'Leaderboard', boardTitle: "Friends' ladder", boardBiome: 'Biome', allBiomes: 'All biomes, total score', nickLabel: 'Your name on the board', nickPh: 'Pick a name',
     you: 'you', someone: 'Someone', cleared8: (n) => `${n} of 8 bosses`,
@@ -804,7 +809,7 @@ const UI = {
     lede: 'Havrani tě nechali u osamělého ohniště na okraji divočiny. Vše, co vyleze z lesa, nese runový kámen. Vyryj jeho slovo a vystřel šíp dřív, než dorazí k tvé palisádě.',
     gBiome: 'Biom', unlock: (d) => `Odemknout všechny biomy (${d})`, gLang: 'Jazyk run', langEnSub: 'Anglické runy', langCsSub: 'Diakritika nepovinná',
     gDiff: 'Obtížnost', dnoob: 'Noob', dnoobSub: 'Drobné runy, ospalé nohy', deasy: 'Lehká', deasySub: 'Krátké runy, pomalé nohy', dnormal: 'Normální', dnormalSub: 'Mírnější sága', dhard: 'Těžká', dhardSub: 'Plná sága', dbrutal: 'Brutální', dbrutalSub: 'Dlouhé runy, rychlé nohy',
-    gOptions: 'Možnosti', bigName: 'Gaba nemá brýle', bigSub: 'Extra velké runy a text', bigSize: 'Velikost písma', swearName: 'Sprostý režim 18+', swearSub: 'Sprosté runy v obou jazycích',
+    gOptions: 'Možnosti', bigName: 'Gaba nemá brýle', bigSub: 'Extra velké runy a text', bigSize: 'Velikost písma', fanNote: 'Neoficiální fanouškovská hra inspirovaná Valheimem. Nijak nesouvisí se studii Iron Gate a Coffee Stain.', swearName: 'Sprostý režim 18+', swearSub: 'Sprosté runy v obou jazycích',
     volMusic: 'Hlasitost hudby', volFx: 'Hlasitost efektů', statsBtn: 'Statistiky',
     boardBtn: 'Žebříček', boardTitle: 'Žebříček přátel', boardBiome: 'Biom', allBiomes: 'Všechny biomy, součet skóre', nickLabel: 'Tvoje jméno v žebříčku', nickPh: 'Vyber si jméno',
     you: 'ty', someone: 'Někdo', cleared8: (n) => `${n} z 8 bossů`,
@@ -866,7 +871,7 @@ UI.ru = {
   gBiome: 'Биом', unlock: (d) => `Открыть все биомы (${d})`, gLang: 'Язык рун',
   langEnSub: 'Английские руны', langCsSub: 'Диакритика по желанию', langRuSub: 'Кириллица или транслит', langBeSub: 'Кириллица или транслит',
   gDiff: 'Сложность', dnoob: 'Нуб', dnoobSub: 'Крошечные руны, сонные ноги', deasy: 'Лёгкая', deasySub: 'Короткие руны, медленные ноги', dnormal: 'Нормальная', dnormalSub: 'Сага помягче', dhard: 'Сложная', dhardSub: 'Полная сага', dbrutal: 'Брутальная', dbrutalSub: 'Длинные руны, быстрые ноги',
-  gOptions: 'Настройки', bigName: 'У Габы нет очков', bigSub: 'Очень крупные руны и текст', bigSize: 'Размер текста', swearName: 'Мат 18+', swearSub: 'Грубые руны на любом языке',
+  gOptions: 'Настройки', bigName: 'У Габы нет очков', bigSub: 'Очень крупные руны и текст', bigSize: 'Размер текста', fanNote: 'Неофициальная фанатская игра по мотивам Valheim. Не связана с Iron Gate и Coffee Stain.', swearName: 'Мат 18+', swearSub: 'Грубые руны на любом языке',
   volMusic: 'Громкость музыки', volFx: 'Громкость эффектов', statsBtn: 'Статистика',
   boardBtn: 'Таблица рекордов', boardTitle: 'Рейтинг друзей', boardBiome: 'Биом', allBiomes: 'Все биомы, сумма очков', nickLabel: 'Твоё имя в рейтинге', nickPh: 'Выбери имя',
   you: 'ты', someone: 'Кто-то', cleared8: (n) => `${n} из 8 боссов`,
@@ -925,7 +930,7 @@ UI.be = {
   gBiome: 'Біём', unlock: (d) => `Адкрыць усе біёмы (${d})`, gLang: 'Мова рун',
   langEnSub: 'Англійскія руны', langCsSub: 'Дыякрытыка па жаданні', langRuSub: 'Кірыліца або лацінка', langBeSub: 'Кірыліца або лацінка',
   gDiff: 'Складанасць', dnoob: 'Нуб', dnoobSub: 'Малюсенькія руны, сонныя ногі', deasy: 'Лёгкая', deasySub: 'Кароткія руны, павольныя ногі', dnormal: 'Звычайная', dnormalSub: 'Мякчэйшая сага', dhard: 'Цяжкая', dhardSub: 'Поўная сага', dbrutal: 'Брутальная', dbrutalSub: 'Доўгія руны, хуткія ногі',
-  gOptions: 'Налады', bigName: 'У Габы няма акуляраў', bigSub: 'Вельмі буйныя руны і тэкст', bigSize: 'Памер тэксту', swearName: 'Мацюкі 18+', swearSub: 'Грубыя руны на любой мове',
+  gOptions: 'Налады', bigName: 'У Габы няма акуляраў', bigSub: 'Вельмі буйныя руны і тэкст', bigSize: 'Памер тэксту', fanNote: 'Неафіцыйная фанацкая гульня паводле Valheim. Не звязана з Iron Gate і Coffee Stain.', swearName: 'Мацюкі 18+', swearSub: 'Грубыя руны на любой мове',
   volMusic: 'Гучнасць музыкі', volFx: 'Гучнасць эфектаў', statsBtn: 'Статыстыка',
   boardBtn: 'Табліца рэкордаў', boardTitle: 'Рэйтынг сяброў', boardBiome: 'Біём', allBiomes: 'Усе біёмы, сума ачкоў', nickLabel: 'Тваё імя ў рэйтынгу', nickPh: 'Выберы імя',
   you: 'ты', someone: 'Нехта', cleared8: (n) => `${n} з 8 босаў`,
@@ -1051,7 +1056,7 @@ UI.es = {
   lede: 'Los cuervos te dejaron junto a un hogar solitario al borde de la espesura. Todo lo que sale del bosque lleva una piedra rúnica. Escribe su palabra para lanzar una flecha antes de que llegue a tu empalizada.',
   gBiome: 'Bioma', unlock: (d) => `Desbloquear todos los biomas en ${d}`, gLang: 'Idioma de las runas',
   gDiff: 'Dificultad', dnoob: 'Novato', dnoobSub: 'Runas diminutas, pies dormidos', deasy: 'Fácil', deasySub: 'Runas cortas, pies lentos', dnormal: 'Normal', dnormalSub: 'Una saga más suave', dhard: 'Difícil', dhardSub: 'La saga completa', dbrutal: 'Brutal', dbrutalSub: 'Runas largas, pies rápidos',
-  gExtras: 'Extras', bigName: 'Gaba no tiene gafas', bigSub: 'Runas y textos extragrandes', bigSize: 'Tamaño del texto', swearName: 'Palabrotas +18', swearSub: 'Runas groseras en cualquier idioma',
+  gExtras: 'Extras', bigName: 'Gaba no tiene gafas', bigSub: 'Runas y textos extragrandes', bigSize: 'Tamaño del texto', fanNote: 'Juego fan no oficial inspirado en Valheim. Sin relación con Iron Gate ni Coffee Stain.', swearName: 'Palabrotas +18', swearSub: 'Runas groseras en cualquier idioma',
   volMusic: 'Volumen de la música', volFx: 'Volumen de efectos', statsBtn: 'Estadísticas',
   boardBtn: 'Clasificación', boardTitle: 'Escalera de amigos', boardBiome: 'Bioma', allBiomes: 'Todos los biomas, puntuación total', nickLabel: 'Tu nombre en la tabla', nickPh: 'Elige un nombre',
   you: 'tú', someone: 'Alguien', cleared8: (n) => `${n} de 8 jefes`,
@@ -1098,7 +1103,7 @@ UI.de = {
   lede: 'Die Raben haben dich an einem einsamen Herdfeuer am Rand der Wildnis zurückgelassen. Alles, was aus dem Wald kommt, trägt einen Runenstein. Tippe sein Wort, um einen Pfeil abzuschießen, bevor es deine Palisade erreicht.',
   gBiome: 'Biom', unlock: (d) => `Alle Biome auf ${d} freischalten`, gLang: 'Runensprache',
   gDiff: 'Schwierigkeit', dnoob: 'Noob', dnoobSub: 'Winzige Runen, schläfrige Füße', deasy: 'Leicht', deasySub: 'Kurze Runen, langsame Füße', dnormal: 'Normal', dnormalSub: 'Eine sanftere Saga', dhard: 'Schwer', dhardSub: 'Die ganze Saga', dbrutal: 'Brutal', dbrutalSub: 'Lange Runen, schnelle Füße',
-  gExtras: 'Extras', bigName: 'Gaba hat keine Brille', bigSub: 'Extragroße Runen und Texte', bigSize: 'Textgröße', swearName: 'Fluchen ab 18', swearSub: 'Derbe Runen in jeder Sprache',
+  gExtras: 'Extras', bigName: 'Gaba hat keine Brille', bigSub: 'Extragroße Runen und Texte', bigSize: 'Textgröße', fanNote: 'Inoffizielles Fanspiel, inspiriert von Valheim. Nicht mit Iron Gate oder Coffee Stain verbunden.', swearName: 'Fluchen ab 18', swearSub: 'Derbe Runen in jeder Sprache',
   volMusic: 'Musiklautstärke', volFx: 'Effektlautstärke', statsBtn: 'Statistik',
   boardBtn: 'Bestenliste', boardTitle: 'Rangliste der Freunde', boardBiome: 'Biom', allBiomes: 'Alle Biome, Gesamtpunkte', nickLabel: 'Dein Name in der Liste', nickPh: 'Wähle einen Namen',
   you: 'du', someone: 'Jemand', cleared8: (n) => `${n} von 8 Bossen`,
@@ -1145,7 +1150,7 @@ UI.fr = {
   lede: 'Les corbeaux t’ont laissé près d’un foyer isolé au bord des terres sauvages. Tout ce qui sort de la forêt porte une pierre runique. Tape son mot pour décocher une flèche avant qu’il n’atteigne ta palissade.',
   gBiome: 'Biome', unlock: (d) => `Débloquer tous les biomes en ${d}`, gLang: 'Langue des runes',
   gDiff: 'Difficulté', dnoob: 'Débutant', dnoobSub: 'Runes minuscules, pieds endormis', deasy: 'Facile', deasySub: 'Runes courtes, pieds lents', dnormal: 'Normal', dnormalSub: 'Une saga plus douce', dhard: 'Difficile', dhardSub: 'La saga complète', dbrutal: 'Brutal', dbrutalSub: 'Runes longues, pieds rapides',
-  gExtras: 'Extras', bigName: 'Gaba n’a pas de lunettes', bigSub: 'Runes et textes très grands', bigSize: 'Taille du texte', swearName: 'Jurons 18+', swearSub: 'Runes grossières dans toutes les langues',
+  gExtras: 'Extras', bigName: 'Gaba n’a pas de lunettes', bigSub: 'Runes et textes très grands', bigSize: 'Taille du texte', fanNote: 'Jeu de fan non officiel inspiré de Valheim. Sans lien avec Iron Gate ni Coffee Stain.', swearName: 'Jurons 18+', swearSub: 'Runes grossières dans toutes les langues',
   volMusic: 'Volume de la musique', volFx: 'Volume des effets', statsBtn: 'Statistiques',
   boardBtn: 'Classement', boardTitle: 'Classement des amis', boardBiome: 'Biome', allBiomes: 'Tous les biomes, score total', nickLabel: 'Ton nom au classement', nickPh: 'Choisis un nom',
   you: 'toi', someone: 'Quelqu’un', cleared8: (n) => `${n} boss sur 8`,
@@ -1192,7 +1197,7 @@ UI.it = {
   lede: 'I corvi ti hanno lasciato presso un focolare solitario ai margini delle terre selvagge. Tutto ciò che esce dal bosco porta una pietra runica. Scrivi la sua parola per scoccare una freccia prima che raggiunga la tua palizzata.',
   gBiome: 'Bioma', unlock: (d) => `Sblocca tutti i biomi in ${d}`, gLang: 'Lingua delle rune',
   gDiff: 'Difficoltà', dnoob: 'Novellino', dnoobSub: 'Rune minuscole, piedi assonnati', deasy: 'Facile', deasySub: 'Rune corte, piedi lenti', dnormal: 'Normale', dnormalSub: 'Una saga più gentile', dhard: 'Difficile', dhardSub: 'La saga completa', dbrutal: 'Brutale', dbrutalSub: 'Rune lunghe, piedi veloci',
-  gExtras: 'Extra', bigName: 'Gaba non ha gli occhiali', bigSub: 'Rune e testi extra grandi', bigSize: 'Dimensione del testo', swearName: 'Parolacce 18+', swearSub: 'Rune volgari in ogni lingua',
+  gExtras: 'Extra', bigName: 'Gaba non ha gli occhiali', bigSub: 'Rune e testi extra grandi', bigSize: 'Dimensione del testo', fanNote: 'Gioco amatoriale non ufficiale ispirato a Valheim. Non affiliato a Iron Gate o Coffee Stain.', swearName: 'Parolacce 18+', swearSub: 'Rune volgari in ogni lingua',
   volMusic: 'Volume musica', volFx: 'Volume effetti', statsBtn: 'Statistiche',
   boardBtn: 'Classifica', boardTitle: 'Classifica degli amici', boardBiome: 'Bioma', allBiomes: 'Tutti i biomi, punteggio totale', nickLabel: 'Il tuo nome in classifica', nickPh: 'Scegli un nome',
   you: 'tu', someone: 'Qualcuno', cleared8: (n) => `${n} boss su 8`,
@@ -1239,7 +1244,7 @@ UI.pt = {
   lede: 'Os corvos deixaram-te junto a uma lareira solitária à beira das terras selvagens. Tudo o que sai da floresta traz uma pedra rúnica. Escreve a sua palavra para disparar uma flecha antes que chegue à tua paliçada.',
   gBiome: 'Bioma', unlock: (d) => `Desbloquear todos os biomas em ${d}`, gLang: 'Idioma das runas',
   gDiff: 'Dificuldade', dnoob: 'Novato', dnoobSub: 'Runas minúsculas, pés sonolentos', deasy: 'Fácil', deasySub: 'Runas curtas, pés lentos', dnormal: 'Normal', dnormalSub: 'Uma saga mais suave', dhard: 'Difícil', dhardSub: 'A saga completa', dbrutal: 'Brutal', dbrutalSub: 'Runas longas, pés rápidos',
-  gExtras: 'Extras', bigName: 'A Gaba não tem óculos', bigSub: 'Runas e textos extragrandes', bigSize: 'Tamanho do texto', swearName: 'Palavrões 18+', swearSub: 'Runas grosseiras em qualquer idioma',
+  gExtras: 'Extras', bigName: 'A Gaba não tem óculos', bigSub: 'Runas e textos extragrandes', bigSize: 'Tamanho do texto', fanNote: 'Jogo de fãs não oficial inspirado em Valheim. Sem ligação à Iron Gate nem à Coffee Stain.', swearName: 'Palavrões 18+', swearSub: 'Runas grosseiras em qualquer idioma',
   volMusic: 'Volume da música', volFx: 'Volume dos efeitos', statsBtn: 'Estatísticas',
   boardBtn: 'Classificação', boardTitle: 'Classificação dos amigos', boardBiome: 'Bioma', allBiomes: 'Todos os biomas, pontuação total', nickLabel: 'O teu nome na tabela', nickPh: 'Escolhe um nome',
   you: 'tu', someone: 'Alguém', cleared8: (n) => `${n} de 8 chefes`,
@@ -1286,7 +1291,7 @@ UI.sv = {
   lede: 'Korparna lämnade dig vid en ensam härd i vildmarkens utkant. Allt som kommer ut ur skogen bär en runsten. Skriv dess ord för att skjuta en pil innan det når din palissad.',
   gBiome: 'Biom', unlock: (d) => `Lås upp alla biom på ${d}`, gLang: 'Runornas språk',
   gDiff: 'Svårighet', dnoob: 'Nybörjare', dnoobSub: 'Pyttesmå runor, sömniga fötter', deasy: 'Lätt', deasySub: 'Korta runor, långsamma fötter', dnormal: 'Normal', dnormalSub: 'En mildare saga', dhard: 'Svår', dhardSub: 'Hela sagan', dbrutal: 'Brutal', dbrutalSub: 'Långa runor, snabba fötter',
-  gExtras: 'Extra', bigName: 'Gaba har inga glasögon', bigSub: 'Extra stora runor och texter', bigSize: 'Textstorlek', swearName: 'Svordomar 18+', swearSub: 'Grova runor på alla språk',
+  gExtras: 'Extra', bigName: 'Gaba har inga glasögon', bigSub: 'Extra stora runor och texter', bigSize: 'Textstorlek', fanNote: 'Inofficiellt fanspel inspirerat av Valheim. Inte knutet till Iron Gate eller Coffee Stain.', swearName: 'Svordomar 18+', swearSub: 'Grova runor på alla språk',
   volMusic: 'Musikvolym', volFx: 'Effektvolym', statsBtn: 'Statistik',
   boardBtn: 'Topplista', boardTitle: 'Vännernas topplista', boardBiome: 'Biom', allBiomes: 'Alla biom, total poäng', nickLabel: 'Ditt namn på listan', nickPh: 'Välj ett namn',
   you: 'du', someone: 'Någon', cleared8: (n) => `${n} av 8 bossar`,
@@ -1334,7 +1339,7 @@ UI.pl = {
   lede: 'Kruki zostawiły cię przy samotnym palenisku na skraju dziczy. Każde stworzenie, które wychodzi z lasu, niesie kamień runiczny. Wpisz jego słowo, by wypuścić strzałę, zanim dotrze do twojej palisady.',
   gBiome: 'Biom', unlock: (d) => `Odblokuj wszystkie biomy na poziomie ${d}`, gLang: 'Język run',
   gDiff: 'Poziom trudności', dnoob: 'Nowicjusz', dnoobSub: 'Malutkie runy, senne nogi', deasy: 'Łatwy', deasySub: 'Krótkie runy, wolne nogi', dnormal: 'Normalny', dnormalSub: 'Łagodniejsza saga', dhard: 'Trudny', dhardSub: 'Pełna saga', dbrutal: 'Brutalny', dbrutalSub: 'Długie runy, szybkie nogi',
-  gExtras: 'Dodatki', bigName: 'Gaba nie ma okularów', bigSub: 'Bardzo duże runy i teksty', bigSize: 'Rozmiar tekstu', swearName: 'Przekleństwa 18+', swearSub: 'Wulgarne runy w każdym języku',
+  gExtras: 'Dodatki', bigName: 'Gaba nie ma okularów', bigSub: 'Bardzo duże runy i teksty', bigSize: 'Rozmiar tekstu', fanNote: 'Nieoficjalna gra fanowska inspirowana Valheimem. Niezwiązana z Iron Gate ani Coffee Stain.', swearName: 'Przekleństwa 18+', swearSub: 'Wulgarne runy w każdym języku',
   volMusic: 'Głośność muzyki', volFx: 'Głośność efektów', statsBtn: 'Statystyki',
   boardBtn: 'Ranking', boardTitle: 'Drabinka znajomych', boardBiome: 'Biom', allBiomes: 'Wszystkie biomy, suma punktów', nickLabel: 'Twoje imię w rankingu', nickPh: 'Wybierz imię',
   you: 'ty', someone: 'Ktoś', cleared8: (n) => `${n} z 8 bossów`,
