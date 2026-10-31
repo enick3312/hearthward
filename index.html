@@ -1895,7 +1895,8 @@ if (store.get('hw.diffv') !== '2') {
   } catch (e) { /* storage blocked */ }
   store.set('hw.diffv', '2');
 }
-let diffKey = DIFF[store.get('hw.diff')] ? store.get('hw.diff') : 'normal';
+// new players start on Normal (internal 'hard'); a saved choice always wins
+let diffKey = DIFF[store.get('hw.diff')] ? store.get('hw.diff') : 'hard';
 let bigText = store.get('hw.big') === '1';
 let bigSize = clamp(parseInt(store.get('hw.bigsize') || '100', 10) || 100, 100, 200);
 for (const k of ['music', 'fx']) { const v = parseFloat(store.get('hw.vol.' + k)); if (v >= 0 && v <= 1) vol[k] = v; }
