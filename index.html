@@ -126,6 +126,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 .credit { position: absolute; right: 0; bottom: 0; z-index: 2; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); font-size: 13px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9); pointer-events: none; }
 #app:not([data-mode="title"]) .credit { display: none; }
 .credit { text-align: right; }
+.credit .build { color: var(--muted); font-weight: 500; letter-spacing: 0.12em; }
 .credit small { display: block; max-width: 380px; text-wrap: balance; margin: 4px 0 0 auto; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; line-height: 1.35; text-transform: none; color: var(--muted); }
 .best { font-family: var(--font-mono); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .best b { color: var(--bone); }
@@ -277,7 +278,7 @@ h2 { font-size: clamp(34px, 5.4vw, 52px); line-height: 1.02; }
 
   <div class="banner gutter" id="banner"><div class="banner-main" id="banner-main"></div><div class="banner-sub" id="banner-sub"></div></div>
 
-  <div class="credit gutter">Nikita Elinov 2026<small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
+  <div class="credit gutter">Nikita Elinov 2026 <span class="build">· build 35</span><small data-i18n="fanNote">Unofficial fan game inspired by Valheim. Not affiliated with Iron Gate or Coffee Stain.</small></div>
   <section class="screen side gutter" id="title-screen">
     <div class="card title-card">
       <div class="eyebrow" data-i18n="eyebrow">Typing survival &middot; eight biomes &middot; eight bosses</div>
@@ -2110,6 +2111,7 @@ function complete(t, live) {
 function killEnemy(z, live, split = true) {
   z.dieDur = ['quad', 'neck', 'human', 'gnome'].includes(z.def.body) ? 1.6 : 0.9;
   z.dieAlt = Math.random() < 0.5;
+  if (z.def.look.skel && Math.random() < 0.5) { z.shatter = true; shatterBones(z); }
   z.dying = z.dieDur;
   const d = z.def;
   if (d.split && split) {
@@ -2273,6 +2275,33 @@ function burst(x, y, n, cols, spd, life, grav, size, add = false) {
   }
 }
 function pop(x, y, text, col, life = 1) { world.pops.push({ x, y, text, col, life }); }
+// a skeleton that falls apart: bones and the skull fly off (mostly away from the arrows),
+// tumble, bounce and lie on the ground until they fade
+function shatterBones(z) {
+  const sc = z.s * z.size, h = z.def.h * sc, col = z.def.pal.skin, dark = z.def.pal.skinD;
+  const bone = (y, len, skull) => world.parts.push({
+    x: z.x + rand(-8, 8) * sc, y: z.y - y, vx: rand(-90, 260), vy: rand(-420, -160), g: 1100, life: rand(2.2, 2.8), max: 2.8,
+    c: Math.random() < 0.35 ? dark : col, sz: (skull ? 9 : rand(2.2, 3.4)) * sc, len: len * sc, skull,
+    rot: rand(0, Math.PI * 2), vr: rand(-16, 16), floor: z.y + rand(-6, 8) * sc,
+  });
+  for (let i = 0; i < 12; i++) bone(rand(0.1, 0.8) * h, rand(7, 15), false);
+  bone(0.9 * h, 0, true);
+  burst(z.x, z.y - h * 0.5, 16, [col, dark], 180, 0.7, 300, 3);
+}
+function drawBone(p) {
+  ctx.globalAlpha = Math.min(1, p.life / 0.6);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+  if (p.skull) {
+    ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.sz, p.sz * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(-p.sz * 0.55, p.sz * 0.5, p.sz * 1.1, p.sz * 0.5);
+    ctx.fillStyle = OUT; circle(-p.sz * 0.38, -p.sz * 0.05, p.sz * 0.24, OUT); circle(p.sz * 0.3, -p.sz * 0.05, p.sz * 0.24, OUT);
+  } else {
+    line(-p.len / 2, 0, p.len / 2, 0, p.sz, p.c);
+    for (const e of [-1, 1]) { circle(e * p.len / 2, -p.sz * 0.35, p.sz * 0.6, p.c); circle(e * p.len / 2, p.sz * 0.35, p.sz * 0.6, p.c); }
+  }
+  ctx.restore();
+}
 
 const bannerEl = $('banner');
 function banner(main, sub) {
@@ -2805,7 +2834,11 @@ function update(dt) {
   }
   if (world.pickups.some((p) => p.dead)) world.pickups = world.pickups.filter((p) => !p.dead);
 
-  for (const p of world.parts) { p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985; }
+  for (const p of world.parts) {
+    p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.985;
+    // bones spin, bounce off the ground and settle
+    if (p.floor !== undefined) { p.rot += p.vr * dt; if (p.y > p.floor) { p.y = p.floor; p.vy *= -0.32; p.vx *= 0.55; p.vr *= 0.45; } }
+  }
   world.parts = world.parts.filter((p) => p.life > 0);
   if (world.parts.length > 800) world.parts.splice(0, world.parts.length - 800);
   for (const b of world.globs) {
@@ -3291,6 +3324,7 @@ function drawPalisade() {
 }
 
 function drawEntity(z) {
+  if (z.shatter && z.dying > 0) return; // its bones are already flying
   const d = z.def, sc = z.s * z.size;
   const dyingP = z.dying > 0 ? 1 - z.dying / (z.dieDur || 0.9) : 0;
   ctx.save();
@@ -4550,6 +4584,7 @@ function draw() {
   }
   ctx.restore();
   for (const p of world.parts) {
+    if (p.floor !== undefined) { drawBone(p); continue; }
     ctx.globalAlpha = Math.max(0, p.life / p.max);
     ctx.globalCompositeOperation = p.add ? 'lighter' : 'source-over';
     ctx.fillStyle = p.c; ctx.fillRect(p.x - p.sz / 2, p.y - p.sz / 2, p.sz, p.sz);
