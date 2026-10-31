@@ -2108,7 +2108,7 @@ function complete(t, live) {
 }
 
 function killEnemy(z, live, split = true) {
-  z.dieDur = z.def.body === 'quad' || z.def.body === 'neck' ? 1.6 : 0.9;
+  z.dieDur = ['quad', 'neck', 'human', 'gnome'].includes(z.def.body) ? 1.6 : 0.9;
   z.dieAlt = Math.random() < 0.5;
   z.dying = z.dieDur;
   const d = z.def;
@@ -3307,14 +3307,10 @@ function drawEntity(z) {
   if (alt) ctx.translate(0, -alt + (dyingP > 0 ? Math.pow(dyingP, 1.6) * alt : 0));
   const pivot = (fn) => { ctx.translate(0, -hgt / 2); fn(); ctx.translate(0, hgt / 2); };
   if (dyingP > 0) {
-    const fade = b === 'quad' || b === 'neck' ? 0.84 : 0.55;
+    const fade = b === 'quad' || b === 'neck' || b === 'human' || b === 'gnome' ? 0.86 : 0.55;
     ctx.globalAlpha = dyingP < fade ? 1 : Math.max(0, 1 - (dyingP - fade) / (1 - fade));
     const e = 1 - Math.pow(1 - Math.min(1, dyingP / 0.6), 3);
-    if (b === 'human' || b === 'gnome') {
-      // topple backwards, bounce once on the ground, settle
-      const settle = dyingP > 0.6 ? Math.sin((dyingP - 0.6) / 0.4 * Math.PI) * 0.12 : 0;
-      ctx.translate(e * 10 * sc, 0); ctx.rotate(e * 1.45 - settle);
-    } else if (b === 'flyer') {
+    if (b === 'flyer') {
       ctx.rotate(-e * 0.9 + Math.sin(dyingP * 18) * 0.12 * (1 - dyingP));
     } else if (b === 'blob' || b === 'bonemass') {
       ctx.scale(1 + e * 0.7, 1 - e * 0.75);
@@ -3410,16 +3406,28 @@ function claws(x, y, dir, len, col = '#e8e0c8') { ctx.strokeStyle = col; ctx.lin
 
 function drawGnome(z, o, c) {
   const t = z.phase, sw = Math.sin(t), cw = Math.cos(t), R = mulberry32(z.seed);
-  ctx.translate(0, z.attacking ? 0 : -Math.abs(cw) * 2);
+  const bp = bipedPose(z);
+  ctx.translate(0, z.attacking || bp ? 0 : -Math.abs(cw) * 2);
   if (!z.attacking && !z.dying) ctx.rotate(sw * 0.06);
+  if (bp) bipedCollapse(bp, 13, 11);
+  // dying legs and arms, as for the tall two-legged creatures
+  const dl = (a1, a2, far) => !bp ? [a1, a2] : bp.shot ? [mix(a1, far ? 1.15 : 1.35, bp.legs), mix(a2, far ? 0.75 : 0.95, bp.legs)] : [mix(mix(a1, 0, bp.kneel), 1.05, bp.fall), mix(a2, -1.5, bp.kneel)];
+  // the upper body tips back from the hip in the slow fall
+  const tipBack = () => { if (bp && !bp.shot && bp.fall > 0) { ctx.translate(0, -24); ctx.rotate(bp.fall * 1.45); ctx.translate(0, 24); } };
   const foot = (fx, fy, col) => { ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx - 7, fy + 1); ctx.moveTo(fx, fy); ctx.lineTo(fx - 4, fy + 2.5); ctx.moveTo(fx, fy); ctx.lineTo(fx + 4, fy + 1.5); ctx.stroke(); };
   // far leg and arm
-  let [fx, fy] = limb(3, -24, -sw * 0.5, 12, c.barkD, -sw * 0.5 - 0.5 * Math.max(0, -cw), 13, c.barkD, 7);
+  let [g1, g2] = dl(-sw * 0.5, -sw * 0.5 - 0.5 * Math.max(0, -cw), true);
+  let [fx, fy] = limb(3, -24, g1, 12, c.barkD, g2, 13, c.barkD, 7);
   foot(fx, fy, c.barkD);
-  const [ax, ay] = limb(6, -50, 0.4 + sw * 0.4, 14, c.barkD, 0.2 + sw * 0.3, 14, c.barkD, 4.5);
+  const ba = bp ? (bp.shot ? mix(0.4, 2.1, bp.snap) : mix(0.4 + sw * 0.4, 0.05, bp.kneel)) : 0.4 + sw * 0.4;
+  ctx.save(); tipBack();
+  const [ax, ay] = limb(6, -50, ba, 14, c.barkD, ba - 0.2, 14, c.barkD, 4.5);
   claws(ax, ay, -1, 6, c.barkD);
-  [fx, fy] = limb(-3, -24, sw * 0.5, 12, c.bark, sw * 0.5 - 0.5 * Math.max(0, cw), 13, c.bark, 7);
+  ctx.restore();
+  [g1, g2] = dl(sw * 0.5, sw * 0.5 - 0.5 * Math.max(0, cw), false);
+  [fx, fy] = limb(-3, -24, g1, 12, c.bark, g2, 13, c.bark, 7);
   foot(fx, fy, c.barkD);
+  ctx.save(); tipBack();
   // body: a knotted stump of bark
   const body = [[-15, -58], [-4, -64], [10, -61], [17, -45], [15, -27], [7, -19], [-8, -19], [-17, -31], [-19, -47]];
   if (o.hood) shape([[-6, -82], [12, -78], [22, -56], [24, -24], [12, -16], [4, -40], [-10, -60]], c.hoodD);
@@ -3440,7 +3448,8 @@ function drawGnome(z, o, c) {
     circle(mx - r * 0.5, my - r * 0.3, r * 0.35, c.mossL);
   }
   if (o.moss2) { ellipse(-6, -40, 5, 4, '#8a8578'); ellipse(8, -32, 4, 3, '#9a9588'); }
-  // head
+  // head (bowed or snapped back at the neck while dying)
+  if (bp) { ctx.save(); ctx.translate(-3, -58); ctx.rotate(bp.shot ? 0.7 * bp.snap * (1 - 0.8 * bp.fall) : -0.5 * bp.bow); ctx.translate(3, 58); }
   const head = [[-17, -64], [-13, -77], [-1, -82], [10, -76], [11, -62], [0, -55], [-12, -57]];
   shape(head, c.bark);
   within(head, () => hatch(R, 8, -16, -82, 26, 26, 1, 6, c.barkD, 1.2));
@@ -3470,27 +3479,33 @@ function drawGnome(z, o, c) {
   ellipse(-12, -68, 3.4, 3, '#0e0a08'); ellipse(-4.5, -69, 3, 2.8, '#0e0a08');
   glow(-12, -68, 2, eye); glow(-4.5, -69, 1.8, eye);
   if (!o.hood) { ctx.strokeStyle = '#1a120c'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-14, -60); ctx.lineTo(-11, -59 + (z.attacking ? 2 : 0)); ctx.lineTo(-8, -60); ctx.lineTo(-5, -59); ctx.stroke(); }
-  // front arm: a twisted branch with twig fingers
-  const fa = z.attacking ? (z.lunge > 0 ? 0.5 + (z.lunge / 0.3) * 2.2 : 2.5) : 0.4 - sw * 0.4;
-  const [hx, hy] = limb(-4, -52, fa, 14, c.bark, fa - 0.3, 14, c.bark, o.moss2 ? 7 : 5);
+  if (bp) ctx.restore();
+  // front arm: a twisted branch with twig fingers (to the chest, or flung forward, when dying)
+  let fa = z.attacking ? (z.lunge > 0 ? 0.5 + (z.lunge / 0.3) * 2.2 : 2.5) : 0.4 - sw * 0.4, fa2 = fa - 0.3;
+  if (bp && bp.shot) { fa = mix(fa, 2.5, bp.snap); fa2 = mix(fa2, 2.2, bp.snap); }
+  else if (bp) { fa = mix(fa, 0.25, bp.chest); fa2 = mix(fa2, 2.95, bp.chest); }
+  const [hx, hy] = limb(-4, -52, fa, 14, c.bark, fa2, 14, c.bark, o.moss2 ? 7 : 5);
   if (o.moss2) { circle(hx, hy, 6, '#8a8578'); circle(hx - 2, hy - 2, 2, '#b0ab9c'); }
   else claws(hx, hy, -1, 7, c.barkD);
-  if (o.staff) {
+  if (o.staff && !bp) {
     line(hx, hy - 40, hx + 1, hy + 24, 3.5, '#4a3a28');
     ctx.strokeStyle = '#4a3a28'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hx, hy - 38); ctx.quadraticCurveTo(hx - 8, hy - 46, hx - 2, hy - 52); ctx.moveTo(hx, hy - 38); ctx.quadraticCurveTo(hx + 8, hy - 46, hx + 2, hy - 52); ctx.stroke();
     line(hx + 1, hy - 30, hx + 5, hy - 20, 1, '#d9cfb6'); circle(hx + 5, hy - 19, 1.6, '#d9cfb6');
     glow(hx, hy - 46, 4.5, hexRgb(o.staff), 0.8 + Math.sin(world.time * 6) * 0.2);
   }
+  ctx.restore();
 }
 
 function drawHuman(z, o, c) {
   const t = z.phase, sw = Math.sin(t), cw = Math.cos(t), R = mulberry32(z.seed);
   const bulk = o.bulk || 1, skel = !!o.skel, short = !!o.short;
   const lw = (skel ? 4 : 9) * Math.min(bulk, 1.35);
-  const lean = (o.hunch || 0.12) + (z.attacking ? 0.12 : 0) + Math.sin(t * 0.5) * 0.04;
+  const bp = bipedPose(z);
+  const lean = (o.hunch || 0.12) + (z.attacking ? 0.12 : 0) + Math.sin(t * 0.5) * 0.04 + (bp ? (bp.shot ? -0.3 * bp.snap : 0.18 * bp.kneel - 1.65 * bp.fall) : 0);
   const fast = z.speed > 85;
-  ctx.translate(0, -(z.attacking ? 0 : Math.abs(cw) * (fast ? 4 : 2)));
+  ctx.translate(0, -(z.attacking || bp ? 0 : Math.abs(cw) * (fast ? 4 : 2)));
   const legL = short ? 17 : 24, torso = short ? 32 : 42;
+  if (bp) bipedCollapse(bp, legL, legL - 2 - (o.creep ? 9 : 0));
   // creepers crouch: bent knees bring the hips down so the feet stay on the ground
   const crouch = o.creep ? 9 : 0;
   const hipY = -2 * legL + 2 + crouch, sx = -Math.sin(lean) * torso, sy = hipY - Math.cos(lean) * torso;
@@ -3500,10 +3515,18 @@ function drawHuman(z, o, c) {
   const kindT = skel ? 'bone' : (o.head === 'troll' || o.head === 'goblin' || o.head === 'feathers') ? 'skin' : o.head === 'wolf' ? 'fur' : o.head === 'rock' ? 'stone' : o.head === 'elder' ? 'bark' : 'cloth';
   const armCol = kindT === 'cloth' ? c.cloth : c.skin, armColD = kindT === 'cloth' ? c.clothD : c.skinD;
 
-  const ab = swing(-1);
+  // dying arms: hanging limp while kneeling, flung forward by the force of a head shot
+  // in the slow fall the arms and head turn with the torso as it tips back (tip)
+  const tip = bp && !bp.shot ? 1.65 * bp.fall : 0;
+  const ab = (bp ? (bp.shot ? mix(swing(-1), 2.1, bp.snap) : mix(swing(-1), 0.05, bp.kneel)) : swing(-1)) + tip;
   const [bhx, bhy] = limb(sx + nx * 4, sy + 5, ab, 20, armColD, ab - 0.25, 19, c.skinD, lw - 1);
   circle(bhx, bhy, lw * 0.5, c.skinD);
   const leg = (a1, a2, col, far) => {
+    // dying legs: thighs straight down and shins flat behind for a kneel, or swung up into the air
+    if (bp) {
+      a1 = bp.shot ? mix(a1, far ? 1.15 : 1.35, bp.legs) : mix(mix(a1, far ? 0.05 : -0.1, bp.kneel), 1.05, bp.fall);
+      a2 = bp.shot ? mix(a2, far ? 0.75 : 0.95, bp.legs) : mix(a2, -1.5, bp.kneel);
+    }
     const kx = -Math.sin(a1) * legL, ky = hipY + Math.cos(a1) * legL;
     const [fx, fy] = limb(0, hipY, a1, legL, col, a2, legL, col, lw);
     if (skel) { circle(kx, ky, lw * 0.6, col); line(fx, fy, fx - 7, fy, 2.4, col); return; }
@@ -3614,10 +3637,17 @@ function drawHuman(z, o, c) {
 
   const hr = 11 * (o.head === 'troll' ? 1.25 : o.head === 'elder' || o.head === 'crown' ? 1.15 : 1);
   const hx = sx - Math.sin(lean) * (hr + 2) - 2, hy = sy - Math.cos(lean) * (hr + 2);
+  // the head bows to the chest, or snaps back with the shot, turning at the neck
+  // (turned about its own centre: the lean already carries it along the torso)
+  if (bp) { ctx.save(); ctx.translate(hx, hy); ctx.rotate(bp.shot ? 0.7 * bp.snap * (1 - 0.8 * bp.fall) : -0.55 * bp.bow * (1 - 0.5 * bp.fall) + tip); ctx.translate(-hx, -hy); }
   drawHead(z, o, c, hx, hy, hr, R);
+  if (bp) ctx.restore();
 
-  const fa = o.claws ? swing(1) : z.attacking ? (z.lunge > 0 ? 0.6 + (z.lunge / 0.3) * 2.2 : 2.7) : swing(1);
-  const fa2 = fa - (o.claws ? 0.25 : 0.35);
+  let fa = o.claws ? swing(1) : z.attacking ? (z.lunge > 0 ? 0.6 + (z.lunge / 0.3) * 2.2 : 2.7) : swing(1);
+  let fa2 = fa - (o.claws ? 0.25 : 0.35);
+  // the front hand comes up to the chest, or is flung forward with the other
+  if (bp && bp.shot) { fa = mix(fa, 2.5, bp.snap); fa2 = mix(fa2, 2.2, bp.snap); }
+  else if (bp) { fa = mix(fa, 0.25, bp.chest) + tip; fa2 = mix(fa2, 2.95, bp.chest) + tip; }
   const ex = sx - 2 - Math.sin(fa) * 20, ey = sy + 5 + Math.cos(fa) * 20;
   const [hx2, hy2] = limb(sx - 2, sy + 5, fa, 20, skel ? c.skin : armCol, fa2, 19, c.skin, lw);
   if (skel) circle(ex, ey, lw * 0.6, c.skin);
@@ -3625,7 +3655,7 @@ function drawHuman(z, o, c) {
   circle(hx2, hy2, lw * 0.6, c.skin);
   if (o.claws) claws(hx2, hy2, -1, 10, o.glow ? '#ffd090' : '#e8e4d8');
   if (o.glow) glow(hx2, hy2, 6 + Math.sin(world.time * 8) * 1.5, hexRgb(o.glow), 0.8);
-  if (o.weapon) drawWeapon(o, hx2, hy2, fa2);
+  if (o.weapon && !bp) drawWeapon(o, hx2, hy2, fa2);
   if (o.shield) {
     const shx = sx - 11, shy = (hipY + sy) / 2 - 2;
     ellipse(shx, shy, 10, 20, c.shield);
@@ -3792,6 +3822,32 @@ function drawWeapon(o, x, y, a) {
   }
   ctx.restore();
 }
+
+// two-legged deaths, one of two ways: sinking to the knees with the head bowed and a hand to the
+// chest, a pause, then slowly toppling backwards; or, shot in the head, the head snaps back and the
+// body is thrown over backwards so hard the legs fly up before it lands
+function bipedPose(z) {
+  if (!(z.dying > 0)) return null;
+  const p = 1 - z.dying / (z.dieDur || 0.9), ez = (u) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
+  if (z.dieAlt) {
+    const f = clamp((p - 0.04) / 0.4, 0, 1);
+    return { shot: true, snap: ez(p / 0.08), fall: f * f, legs: ez((p - 0.1) / 0.3) * (1 - 0.6 * ez((p - 0.5) / 0.3)) };
+  }
+  return { shot: false, kneel: ez(p / 0.22), bow: ez((p - 0.12) / 0.15), chest: ez((p - 0.14) / 0.16), fall: ez((p - 0.5) / 0.34) };
+}
+// moves the whole figure for a two-legged death; legLen is the shin, which ends up flat behind the knee
+function bipedCollapse(bp, legLen, drop) {
+  if (bp.shot) {
+    // thrown back from the feet, sliding a little with the blow and leaving the ground for a moment
+    ctx.translate(bp.fall * legLen * 1.2, -Math.sin(Math.PI * bp.fall) * 7);
+    ctx.rotate(bp.fall * 1.55);
+  } else {
+    // kneeling sinks the hips by a shin's length; in the slow fall they sit back onto the heels
+    // (the upper body tips back separately, so the knees stay on the ground)
+    ctx.translate(bp.fall * legLen * 0.5, drop * bp.kneel + bp.fall * legLen * 0.46);
+  }
+}
+const mix = (a, b, u) => a + (b - a) * u;
 
 // four-legged deaths play out in stages, one of two ways:
 // the front legs buckle, the head sags, then the hindquarters drop;
